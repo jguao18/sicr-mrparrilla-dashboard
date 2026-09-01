@@ -375,26 +375,33 @@ function renderizarTablaVentasDetalle(ventas) {
   });
 }
 
-// 6. Renderizado de Tabla de Mermas
+// 6. Renderizado de Tabla de Mermas / Comida Dañada
 function renderizarTablaMermas(mermas) {
   const tbody = document.getElementById("tablaMermasBody");
   if (!tbody) return;
   tbody.innerHTML = "";
 
   if (!mermas || mermas.length === 0) {
-    tbody.innerHTML = "<tr><td colspan='5' class='text-center'>No hay comida dañada ni mermas reportadas. ¡Excelente trabajo en cocina!</td></tr>";
+    tbody.innerHTML = "<tr><td colspan='7' class='text-center'>No hay comida dañada ni mermas reportadas. ¡Excelente trabajo en cocina!</td></tr>";
     return;
   }
 
   mermas.slice().reverse().forEach(m => {
     const fStr = m.fecha ? new Date(m.fecha).toLocaleString([], { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-';
+    const tieneFoto = m.foto && m.foto.indexOf("http") === 0;
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td><code>${m.id}</code></td>
       <td>${fStr}</td>
       <td><strong>${m.plato}</strong></td>
       <td><span class="badge badge-critico">${m.motivo}</span></td>
+      <td><small>${m.observaciones || 'Sin observaciones'}</small></td>
       <td>${m.auditor || 'Personal'}</td>
+      <td>
+        ${tieneFoto 
+          ? `<a href="${m.foto}" target="_blank" class="badge badge-ok" style="text-decoration:none;"><i class="fa-solid fa-camera"></i> Ver Foto</a>` 
+          : '<small style="color:var(--text-muted);">-</small>'}
+      </td>
     `;
     tbody.appendChild(tr);
   });
