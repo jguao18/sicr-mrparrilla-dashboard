@@ -61,8 +61,8 @@ function navegarModulo(idModulo) {
     resumen: { t: "Resumen General del Negocio", d: "Monitoreo en vivo de ventas, qué falta comprar y cómo va la plata en caja" },
     inventario: { t: "¿Qué hay que comprar para la parrilla?", d: "Semáforo en vivo de insumos y presupuesto estimado para el mandado" },
     ventas: { t: "Historial Completo de Ventas y Cuentas", d: "Detalle de cada comanda cobrada, mesero y medio de pago" },
-    caja: { t: "Auditoría de Caja Ciega (Cierres de Turno)", d: "Revisión estricta de dinero físico en gaveta vs. ventas del sistema" },
-    mermas: { t: "Auditoría de Comida Dañada (Mermas)", d: "Registro de comida quemada o caída para justificar el inventario" }
+    caja: { t: "Cuadre de Caja (Para ver si falta plata)", d: "Revisión estricta de dinero físico en gaveta vs. ventas del sistema" },
+    mermas: { t: "Comida que se Dañó, Quemó o Cayó", d: "Registro de comida perdida en la parrilla o salón para saber por qué falta inventario" }
   };
 
   if (titulos[idModulo]) {
