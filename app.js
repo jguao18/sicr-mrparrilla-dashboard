@@ -1,0 +1,266 @@
+// ===================================================================
+// MR. PARRILLA -XPRESS- | LÓGICA Y CONEXIÓN DEL DASHBOARD GERENCIAL
+// ===================================================================
+
+// URL del Endpoint JSON de Google Apps Script (Web App desplegada)
+const API_URL = "https://script.google.com/macros/s/AKfycbzvjDuxGt4M53Cxa0SjgHinxkyvEmZiMNuIkHmeUQhYg43jB0lU9s633Jn0_dtA728-/exec";
+
+let chartMetodosInstance = null;
+let chartPlatosInstance = null;
+
+document.addEventListener("DOMContentLoaded", () => {
+  // Cargar preferencia de tema guardada
+  const temaGuardado = localStorage.getItem("tema_mrparrilla") || "dark";
+  if (temaGuardado === "light") {
+    document.body.classList.add("light-theme");
+    const btnIcon = document.querySelector("#btnThemeToggle i");
+    if (btnIcon) {
+      btnIcon.classList.remove("fa-sun");
+      btnIcon.classList.add("fa-moon");
+    }
+  }
+
+  cargarDatosDashboard();
+});
+
+// Función para alternar entre Modo Claro y Oscuro
+function toggleTheme() {
+  const isLight = document.body.classList.toggle("light-theme");
+  const btnIcon = document.querySelector("#btnThemeToggle i");
+
+  if (isLight) {
+    btnIcon.classList.remove("fa-sun");
+    btnIcon.classList.add("fa-moon");
+    localStorage.setItem("tema_mrparrilla", "light");
+  } else {
+    btnIcon.classList.remove("fa-moon");
+    btnIcon.classList.add("fa-sun");
+    localStorage.setItem("tema_mrparrilla", "dark");
+  }
+
+  // Re-renderizar gráficos para que coincidan los colores de texto
+  if (chartMetodosInstance || chartPlatosInstance) {
+    cargarDatosDashboard();
+  }
+}
+
+async function cargarDatosDashboard() {
+  const lastUpdateSpan = document.getElementById("lastUpdate");
+  lastUpdateSpan.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> Sincronizando con Google Sheets...";
+
+  try {
+    const res = await fetch(API_URL);
+    const data = await res.json();
+
+    if (data.ok) {
+      procesarKPIs(data);
+      renderizarGraficos(data);
+      renderizarTablaInsumos(data.insumos);
+      renderizarTablaCortes(data.cortes);
+
+      const ahora = new Date();
+      lastUpdateSpan.textContent = "Última sincronización: " + ahora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    } else {
+      lastUpdateSpan.textContent = "Error al obtener datos: " + data.error;
+    }
+  } catch (err) {
+    console.error("Error al cargar datos:", err);
+    lastUpdateSpan.textContent = "⚠️ Error de conexión con Google Apps Script.";
+  }
+}
+
+// 1. Procesamiento de Tarjetas KPI
+function procesarKPIs(data) {
+  const hoyStr = new Date().toISOString().split('T')[0];
+  let ventasHoy = 0;
+  let efectivoHoy = 0;
+  let digitalHoy = 0;
+  let cuentasHoy = 0;
+
+  data.ventas.forEach(v => {
+    // Si coincide con la fecha de hoy y está cobrado
+    if (v.estado === "Cobrado") {
+      const total = parseFloat(v.total) || 0;
+      ventasHoy += total;
+      cuentasHoy++;
+
+      const metodo = (v.metodoPago || "").toUpperCase();
+      if (metodo.includes("EFECTIVO")) {
+        efectivoHoy += total;
+      } else {
+        digitalHoy += total;
+      }
+    }
+  });
+
+  // Insumos críticos
+  const criticosCount = (data.insumos || []).filter(i => (parseFloat(i.stockActual) || 0) <= (parseFloat(i.stockMinimo) || 0)).length;
+
+  document.getElementById("kpiVentasHoy").textContent = "$" + ventasHoy.toLocaleString('es-CO');
+  document.getElementById("kpiCuentasHoy").textContent = cuentasHoy + " cuentas cobradas";
+  document.getElementById("kpiEfectivo").textContent = "$" + efectivoHoy.toLocaleString('es-CO');
+  document.getElementById("kpiDigital").textContent = "$" + digitalHoy.toLocaleString('es-CO');
+  document.getElementById("kpiInsumosCriticos").textContent = criticosCount;
+}
+
+// 2. Renderizado de Gráficos (Chart.js)
+function renderizarGraficos(data) {
+  // Gráfico 1: Métodos de Pago
+  let ef = 0, dig = 0;
+  data.ventas.forEach(v => {
+    if (v.estado === "Cobrado") {
+      const tot = parseFloat(v.total) || 0;
+      if ((v.metodoPago || "").toUpperCase().includes("EFECTIVO")) ef += tot;
+      else dig += tot;
+    }
+  });
+
+  const ctxMetodos = document.getElementById("chartMetodosPago").getContext("2d");
+  if (chartMetodosInstance) chartMetodosInstance.destroy();
+
+  chartMetodosInstance = new Chart(ctxMetodos, {
+    type: 'doughnut',
+    data: {
+      labels: ['Efectivo en Caja', 'Nequi / Datáfono'],
+      datasets: [{
+        data: [ef, dig],
+        backgroundColor: ['#10B981', '#3B82F6'],
+        borderWidth: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { color: '#9CA3AF', font: { family: 'Outfit' } } }
+      }
+    }
+  });
+
+  // Gráfico 2: Platos Más Vendidos
+  const platoConteo = {};
+  data.ventas.forEach(v => {
+    if (v.detalle) {
+      const items = v.detalle.split(", ");
+      items.forEach(it => {
+        const parts = it.split("x ");
+        const cant = parseInt(parts[0]) || 1;
+        const nombre = parts[1] || it;
+        platoConteo[nombre] = (platoConteo[nombre] || 0) + cant;
+      });
+    }
+  });
+
+  const sortedPlatos = Object.entries(platoConteo).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const labelsPlatos = sortedPlatos.map(p => p[0]);
+  const dataPlatos = sortedPlatos.map(p => p[1]);
+
+  const ctxPlatos = document.getElementById("chartTopPlatos").getContext("2d");
+  if (chartPlatosInstance) chartPlatosInstance.destroy();
+
+  chartPlatosInstance = new Chart(ctxPlatos, {
+    type: 'bar',
+    data: {
+      labels: labelsPlatos,
+      datasets: [{
+        label: 'Unidades Vendidas',
+        data: dataPlatos,
+        backgroundColor: '#F97316',
+        borderRadius: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: { ticks: { color: '#9CA3AF' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+        x: { ticks: { color: '#9CA3AF', maxRotation: 20 }, grid: { display: false } }
+      },
+      plugins: {
+        legend: { display: false }
+      }
+    }
+  });
+}
+
+// 3. Renderizado de Tabla de Insumos / Compras
+function renderizarTablaInsumos(insumos) {
+  const tbody = document.getElementById("tablaInsumosBody");
+  tbody.innerHTML = "";
+
+  if (!insumos || insumos.length === 0) {
+    tbody.innerHTML = "<tr><td colspan='8' class='text-center'>No hay insumos registrados en la hoja.</td></tr>";
+    return;
+  }
+
+  insumos.forEach(i => {
+    const act = parseFloat(i.stockActual) || 0;
+    const min = parseFloat(i.stockMinimo) || 0;
+    const costoUnit = parseFloat(i.costoUnitario) || 0;
+    const esCritico = act <= min;
+
+    let sugerenciaCompra = 0;
+    let costoTotalSugerido = 0;
+
+    if (esCritico) {
+      sugerenciaCompra = (min * 2) - act;
+      if (sugerenciaCompra <= 0) sugerenciaCompra = min;
+      costoTotalSugerido = sugerenciaCompra * costoUnit;
+    }
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><strong>${i.nombre}</strong></td>
+      <td>${i.categoria || 'General'}</td>
+      <td><strong>${act}</strong> ${i.unidad}</td>
+      <td>${min} ${i.unidad}</td>
+      <td>
+        <span class="badge ${esCritico ? 'badge-critico' : 'badge-ok'}">
+          <i class="fa-solid ${esCritico ? 'fa-triangle-exclamation' : 'fa-circle-check'}"></i>
+          ${esCritico ? '¡Comprar Urgente!' : 'Stock Óptimo'}
+        </span>
+      </td>
+      <td>${esCritico ? `<strong>+${sugerenciaCompra} ${i.unidad}</strong>` : '-'}</td>
+      <td>${esCritico ? '$' + costoTotalSugerido.toLocaleString('es-CO') : '-'}</td>
+      <td><small style="color:var(--text-muted);">${i.proveedor || 'Local'}</small></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// 4. Renderizado de Tabla de Cortes de Caja Ciega
+function renderizarTablaCortes(cortes) {
+  const tbody = document.getElementById("tablaCortesBody");
+  tbody.innerHTML = "";
+
+  if (!cortes || cortes.length === 0) {
+    tbody.innerHTML = "<tr><td colspan='7' class='text-center'>No hay registros de cierres de caja.</td></tr>";
+    return;
+  }
+
+  cortes.slice(-8).reverse().forEach(c => {
+    const dif = parseFloat(c.diferencia) || 0;
+    let badgeClass = "badge-ok";
+    if (dif < -1000) badgeClass = "badge-critico";
+    else if (dif > 1000) badgeClass = "badge-sobrante";
+
+    const fechaStr = new Date(c.fecha).toLocaleString([], { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${fechaStr}</td>
+      <td><strong>${c.cajero}</strong></td>
+      <td>$${(parseFloat(c.montoFisico)||0).toLocaleString('es-CO')}</td>
+      <td>$${(parseFloat(c.totalEfectivo)||0).toLocaleString('es-CO')}</td>
+      <td>$${(parseFloat(c.totalDigital)||0).toLocaleString('es-CO')}</td>
+      <td><strong style="color:${dif < -1000 ? '#F87171' : '#34D399'};">$${dif.toLocaleString('es-CO')}</strong></td>
+      <td><span class="badge ${badgeClass}">${c.estado}</span></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// 5. Imprimir Lista de Compras
+function imprimirListaCompras() {
+  window.print();
+}

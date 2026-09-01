@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mr. Parrilla -Xpress- | Portal Gerencial</title>
+  <link rel="stylesheet" href="styles.css">
+  <!-- Google Fonts & Font Awesome Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+  <!-- Background Glows -->
+  <div class="glow glow-1"></div>
+  <div class="glow glow-2"></div>
+
+  <!-- Sidebar / Navigation -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-logo">
+        <i class="fa-solid fa-fire-flame-curved"></i>
+      </div>
+      <div class="brand-text">
+        <h2>MR. PARRILLA</h2>
+        <span>-XPRESS- VALLEDUPAR</span>
+      </div>
+    </div>
+
+    <nav class="nav-menu">
+      <a href="#kpis" class="nav-item active"><i class="fa-solid fa-chart-pie"></i> Resumen General</a>
+      <a href="#inventario" class="nav-item"><i class="fa-solid fa-boxes-stacked"></i> Insumos y Compras</a>
+      <a href="#ventas" class="nav-item"><i class="fa-solid fa-receipt"></i> Ventas y Comandas</a>
+      <a href="#caja" class="nav-item"><i class="fa-solid fa-vault"></i> Auditoría de Caja Ciega</a>
+      <a href="#mermas" class="nav-item"><i class="fa-solid fa-trash-can"></i> Mermas en Cocina</a>
+    </nav>
+
+    <div class="user-status-card">
+      <div class="user-avatar">
+        <i class="fa-solid fa-crown"></i>
+      </div>
+      <div class="user-info">
+        <p class="user-name">Panel Dueña / Admin</p>
+        <p class="user-role">Acceso Restringido</p>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content Area -->
+  <main class="main-content">
+    
+    <!-- Top Header -->
+    <header class="top-header">
+      <div class="header-title">
+        <h1>Centro de Control y Finanzas</h1>
+        <p>Monitoreo en vivo de ventas, qué falta comprar y cómo va la plata en caja</p>
+      </div>
+      <div class="header-actions">
+        <button id="btnThemeToggle" class="btn-theme" onclick="toggleTheme()" title="Cambiar Tema (Claro / Oscuro)">
+          <i class="fa-solid fa-sun"></i>
+        </button>
+        <button id="btnActualizar" class="btn-primary" onclick="cargarDatosDashboard()">
+          <i class="fa-solid fa-rotate"></i> Actualizar Datos
+        </button>
+        <span id="lastUpdate" class="last-update">Sincronizando...</span>
+      </div>
+    </header>
+
+    <!-- KPI Summary Cards -->
+    <section id="kpis" class="kpi-grid">
+      <div class="card kpi-card">
+        <div class="kpi-icon icon-ventas">
+          <i class="fa-solid fa-sack-dollar"></i>
+        </div>
+        <div class="kpi-data">
+          <span>Ventas Totales Hoy</span>
+          <h3 id="kpiVentasHoy">$0</h3>
+          <small id="kpiCuentasHoy">0 cuentas cobradas</small>
+        </div>
+      </div>
+
+      <div class="card kpi-card">
+        <div class="kpi-icon icon-efectivo">
+          <i class="fa-solid fa-money-bill-wave"></i>
+        </div>
+        <div class="kpi-data">
+          <span>Efectivo en Gaveta</span>
+          <h3 id="kpiEfectivo">$0</h3>
+          <small>Plata física en mano</small>
+        </div>
+      </div>
+
+      <div class="card kpi-card">
+        <div class="kpi-icon icon-digital">
+          <i class="fa-solid fa-mobile-screen-button"></i>
+        </div>
+        <div class="kpi-data">
+          <span>Nequi / Daviplata / Datáfono</span>
+          <h3 id="kpiDigital">$0</h3>
+          <small>Plata en los bancos</small>
+        </div>
+      </div>
+
+      <div class="card kpi-card">
+        <div class="kpi-icon icon-alert">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+        <div class="kpi-data">
+          <span>Insumos por Comprar</span>
+          <h3 id="kpiInsumosCriticos">0</h3>
+          <small class="badge-alert">¡Poco stock en cocina!</small>
+        </div>
+      </div>
+    </section>
+
+    <!-- Charts Section -->
+    <section class="charts-grid">
+      <div class="card chart-card">
+        <div class="card-header">
+          <h3><i class="fa-solid fa-chart-column"></i> ¿Cómo pagó la gente hoy?</h3>
+        </div>
+        <div class="chart-container">
+          <canvas id="chartMetodosPago"></canvas>
+        </div>
+      </div>
+
+      <div class="card chart-card">
+        <div class="card-header">
+          <h3><i class="fa-solid fa-fire"></i> Los Platos que Más Salen</h3>
+        </div>
+        <div class="chart-container">
+          <canvas id="chartTopPlatos"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- Insumos & Compras Section -->
+    <section id="inventario" class="content-section">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h3><i class="fa-solid fa-boxes-stacked"></i> ¿Qué hay que comprar para la parrilla?</h3>
+            <p class="section-desc">Revisa qué carne, papa o verdura está bajita para mandar a comprar antes de abrir.</p>
+          </div>
+          <button class="btn-secondary" onclick="imprimirListaCompras()">
+            <i class="fa-solid fa-print"></i> Imprimir Lista para el Mandado
+          </button>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Producto / Insumo</th>
+                <th>Categoría</th>
+                <th>Hay en Cocina</th>
+                <th>Mínimo Obligatorio</th>
+                <th>Estado</th>
+                <th>Cuánto Comprar</th>
+                <th>Plata Estimada</th>
+                <th>Dónde Comprarlo</th>
+              </tr>
+            </thead>
+            <tbody id="tablaInsumosBody">
+              <tr>
+                <td colspan="8" class="text-center">Cargando insumos...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Auditoría de Caja Ciega -->
+    <section id="caja" class="content-section">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h3><i class="fa-solid fa-vault"></i> Cuadre de Caja (Para ver si falta plata)</h3>
+            <p class="section-desc">Revisión de lo que el cajero contó en físico contra lo que el sistema cobró.</p>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Fecha / Hora</th>
+                <th>Cajero</th>
+                <th>Físico Contado</th>
+                <th>Sistema (Esperado)</th>
+                <th>Ventas Digitales</th>
+                <th>Diferencia</th>
+                <th>Resultado</th>
+              </tr>
+            </thead>
+            <tbody id="tablaCortesBody">
+              <tr>
+                <td colspan="7" class="text-center">Cargando auditoría de cortes...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
