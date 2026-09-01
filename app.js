@@ -62,12 +62,24 @@ function navegarModulo(idModulo) {
     inventario: { t: "¿Qué hay que comprar para la parrilla?", d: "Semáforo en vivo de insumos y presupuesto estimado para el mandado" },
     ventas: { t: "Historial Completo de Ventas y Cuentas", d: "Detalle de cada comanda cobrada, mesero y medio de pago" },
     caja: { t: "Cuadre de Caja (Para ver si falta plata)", d: "Revisión estricta de dinero físico en gaveta vs. ventas del sistema" },
+    finanzas: { t: "Informes de Ganancias (Semanal / Mensual)", d: "Balance general de ventas, costo de carne e insumos y utilidad para la Dueña" },
     mermas: { t: "Comida que se Dañó, Quemó o Cayó", d: "Registro de comida perdida en la parrilla o salón para saber por qué falta inventario" }
   };
 
   if (titulos[idModulo]) {
     document.getElementById("viewTitle").textContent = titulos[idModulo].t;
     document.getElementById("viewDesc").textContent = titulos[idModulo].d;
+  }
+}
+
+// Control de Periodo de Finanzas
+let periodoFinanzasActual = "semana";
+function cambiarPeriodoFinanzas(periodo) {
+  periodoFinanzasActual = periodo;
+  document.getElementById("btnPeriodoSemanal").classList.toggle("active", periodo === "semana");
+  document.getElementById("btnPeriodoMensual").classList.toggle("active", periodo === "mes");
+  if (datosGlobalesCache) {
+    renderizarFinanzas(datosGlobalesCache);
   }
 }
 
@@ -105,6 +117,8 @@ function toggleTheme() {
   }
 }
 
+let datosGlobalesCache = null;
+
 async function cargarDatosDashboard() {
   const lastUpdateSpan = document.getElementById("lastUpdate");
   lastUpdateSpan.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> Sincronizando con Google Sheets...";
@@ -114,12 +128,14 @@ async function cargarDatosDashboard() {
     const data = await res.json();
 
     if (data.ok) {
+      datosGlobalesCache = data;
       procesarKPIs(data);
       renderizarGraficos(data);
       renderizarTablaInsumos(data.insumos);
       renderizarTablaCortes(data.cortes);
       renderizarTablaVentasDetalle(data.ventas);
       renderizarTablaMermas(data.mermas);
+      renderizarFinanzas(data);
 
       const ahora = new Date();
       lastUpdateSpan.textContent = "Última sincronización: " + ahora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -384,7 +400,74 @@ function renderizarTablaMermas(mermas) {
   });
 }
 
-// 7. Imprimir Lista de Compras
-function imprimirListaCompras() {
-  window.print();
+// 8. Renderizado de Informes de Finanzas (Semanal / Mensual)
+function renderizarFinanzas(data) {
+  const tbody = document.getElementById("tablaFinanzasBody");
+  if (!tbody) return;
+  tbody.innerHTML = "";
+
+  const ventas = data.ventas || [];
+  const ahora = new Date();
+  
+  // Filtrar según periodo (semana: últimos 7 días, mes: mes actual)
+  const ventasFiltradas = ventas.filter(v => {
+    if (!v.fecha) return false;
+    const fVenta = new Date(v.fecha);
+    if (isNaN(fVenta.getTime())) return true;
+
+    if (periodoFinanzasActual === "semana") {
+      const sieteDiasAtras = new Date(ahora.getTime() - (7 * 24 * 60 * 60 * 1000));
+      return fVenta >= sieteDiasAtras;
+    } else {
+      return fVenta.getMonth() === ahora.getMonth() && fVenta.getFullYear() === ahora.getFullYear();
+    }
+  });
+
+  let totalVentas = 0;
+  let totalEfectivo = 0;
+  let totalDigital = 0;
+  let cantidadCuentas = ventasFiltradas.length;
+
+  ventasFiltradas.forEach(v => {
+    const m = parseFloat(v.total) || 0;
+    totalVentas += m;
+    if (v.metodoPago === "Efectivo") totalEfectivo += m;
+    else totalDigital += m;
+  });
+
+  // Costo estimado de alimentos (Promedio estándar asadero 35% del precio de venta)
+  const costoAlimentosEstimado = Math.round(totalVentas * 0.35);
+  const utilidadBruta = totalVentas - costoAlimentosEstimado;
+  const margenPorcentaje = totalVentas > 0 ? Math.round((utilidadBruta / totalVentas) * 100) : 0;
+
+  // Actualizar Tarjetas KPI de Finanzas
+  document.getElementById("lblFinanzasVentas").textContent = periodoFinanzasActual === "semana" ? "Ventas Últimos 7 Días" : "Ventas del Mes en Curso";
+  document.getElementById("kpiFinanzasVentas").textContent = "$" + totalVentas.toLocaleString("es-CO");
+  document.getElementById("lblFinanzasCuentas").textContent = cantidadCuentas + " comandas cobradas con éxito";
+  document.getElementById("kpiFinanzasCostoInsumos").textContent = "- $" + costoAlimentosEstimado.toLocaleString("es-CO");
+  document.getElementById("kpiFinanzasUtilidad").textContent = "$" + utilidadBruta.toLocaleString("es-CO");
+  document.getElementById("kpiFinanzasMargen").textContent = "Margen de Ganancia: " + margenPorcentaje + "%";
+  document.getElementById("kpiFinanzasEfectivoRatio").textContent = "$" + totalEfectivo.toLocaleString("es-CO");
+  document.getElementById("kpiFinanzasBancoRatio").textContent = "Bancos/Nequi: $" + totalDigital.toLocaleString("es-CO");
+
+  // Filas del Balance Detallado
+  const conceptos = [
+    { concepto: "🟢 Ventas Totales Facturadas", monto: totalVentas, pct: "100%", detalle: "Dinero cobrado a comensales en mesas" },
+    { concepto: "🔴 Costo Estimado de Alimentos (Insumos)", monto: -costoAlimentosEstimado, pct: "35.0%", detalle: "Carne de res, pollo, cerdo, papas, quesos y bebidas" },
+    { concepto: "💵 GANANCIA BRUTA ESTIMADA (DUEÑA)", monto: utilidadBruta, pct: margenPorcentaje + "%", detalle: "Plata disponible antes de pagar nómina y arriendo" },
+    { concepto: "💵 Recaudo en Efectivo Físico", monto: totalEfectivo, pct: (totalVentas > 0 ? Math.round((totalEfectivo/totalVentas)*100) : 0) + "%", detalle: "Billetes y monedas recibidos en gaveta" },
+    { concepto: "📲 Recaudo Digital (Nequi/Daviplata/Datáfono)", monto: totalDigital, pct: (totalVentas > 0 ? Math.round((totalDigital/totalVentas)*100) : 0) + "%", detalle: "Plata que entró directamente a cuentas de banco" }
+  ];
+
+  conceptos.forEach(c => {
+    const tr = document.createElement("tr");
+    const esPositivo = c.monto >= 0;
+    tr.innerHTML = `
+      <td><strong>${c.concepto}</strong></td>
+      <td><strong style="color: ${c.concepto.includes('GANANCIA') ? '#34D399' : (c.monto < 0 ? '#F87171' : 'var(--text-main)')};">$${Math.abs(c.monto).toLocaleString('es-CO')}</strong></td>
+      <td><span class="badge ${c.monto < 0 ? 'badge-critico' : 'badge-ok'}">${c.pct}</span></td>
+      <td><small style="color:var(--text-muted);">${c.detalle}</small></td>
+    `;
+    tbody.appendChild(tr);
+  });
 }

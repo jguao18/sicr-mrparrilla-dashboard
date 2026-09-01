@@ -63,6 +63,9 @@
       <button class="nav-item" onclick="navegarModulo('caja')">
         <i class="fa-solid fa-vault"></i> Cuadre de Caja Ciega
       </button>
+      <button class="nav-item" onclick="navegarModulo('finanzas')">
+        <i class="fa-solid fa-sack-dollar"></i> Informes de Ganancias (Semanal / Mensual)
+      </button>
       <button class="nav-item" onclick="navegarModulo('mermas')">
         <i class="fa-solid fa-fire-burner"></i> Comida que se Dañó
       </button>
@@ -259,7 +262,88 @@
     </div>
 
     <!-- ============================================================= -->
-    <!-- VISTA 4: CUADRE DE CAJA CIEGA -->
+    <!-- VISTA: FINANZAS Y GANANCIAS (SEMANAL / MENSUAL) -->
+    <!-- ============================================================= -->
+    <div id="modulo-finanzas" class="modulo-vista">
+      <!-- Selector de Periodo -->
+      <div class="period-selector-bar" style="margin-bottom: 1.5rem; display: flex; gap: 12px;">
+        <button id="btnPeriodoSemanal" class="btn-secondary active" onclick="cambiarPeriodoFinanzas('semana')" style="padding: 10px 20px; border-radius: 10px; cursor: pointer;">
+          <i class="fa-solid fa-calendar-week"></i> Esta Semana (Últimos 7 Días)
+        </button>
+        <button id="btnPeriodoMensual" class="btn-secondary" onclick="cambiarPeriodoFinanzas('mes')" style="padding: 10px 20px; border-radius: 10px; cursor: pointer;">
+          <i class="fa-solid fa-calendar-days"></i> Este Mes (Consolidado)
+        </button>
+      </div>
+
+      <!-- Tarjetas de Balance -->
+      <section class="kpi-grid">
+        <div class="card kpi-card">
+          <div class="kpi-icon icon-ventas"><i class="fa-solid fa-sack-dollar"></i></div>
+          <div class="kpi-data">
+            <span id="lblFinanzasVentas">Ventas del Periodo</span>
+            <h3 id="kpiFinanzasVentas">$0</h3>
+            <small id="lblFinanzasCuentas">0 comandas cobradas</small>
+          </div>
+        </div>
+
+        <div class="card kpi-card">
+          <div class="kpi-icon icon-alert"><i class="fa-solid fa-drumstick-bite"></i></div>
+          <div class="kpi-data">
+            <span>Costo Estimado Alimentos</span>
+            <h3 id="kpiFinanzasCostoInsumos">$0</h3>
+            <small>Carne, papas, quesos y bebidas</small>
+          </div>
+        </div>
+
+        <div class="card kpi-card">
+          <div class="kpi-icon icon-digital"><i class="fa-solid fa-chart-line"></i></div>
+          <div class="kpi-data">
+            <span style="color: #34D399; font-weight: 700;">Ganancia Bruta Real</span>
+            <h3 id="kpiFinanzasUtilidad" style="color: #34D399;">$0</h3>
+            <small id="kpiFinanzasMargen">Margen: 0%</small>
+          </div>
+        </div>
+
+        <div class="card kpi-card">
+          <div class="kpi-icon icon-efectivo"><i class="fa-solid fa-wallet"></i></div>
+          <div class="kpi-data">
+            <span>Recaudo Efectivo vs Banco</span>
+            <h3 id="kpiFinanzasEfectivoRatio">$0</h3>
+            <small id="kpiFinanzasBancoRatio">Banco: $0</small>
+          </div>
+        </div>
+      </section>
+
+      <!-- Resumen Detallado Financiero -->
+      <section class="content-section">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h3><i class="fa-solid fa-file-invoice-dollar"></i> Desglose Financiero y Rendimiento</h3>
+              <p class="section-desc">Cálculo en vivo de ingresos, costo de materia prima y utilidad neta para la Dueña.</p>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Concepto Financiero</th>
+                  <th>Monto Total ($)</th>
+                  <th>% Sobre las Ventas</th>
+                  <th>Detalle Operativo</th>
+                </tr>
+              </thead>
+              <tbody id="tablaFinanzasBody">
+                <tr><td colspan="4" class="text-center">Calculando informe financiero...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ============================================================= -->
+    <!-- VISTA: CUADRE DE CAJA CIEGA -->
     <!-- ============================================================= -->
     <div id="modulo-caja" class="modulo-vista">
       <section class="content-section">
