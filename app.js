@@ -8,8 +8,44 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzvjDuxGt4M53Cxa0SjgHin
 let chartMetodosInstance = null;
 let chartPlatosInstance = null;
 
+// PIN de Seguridad por defecto (Cámbialo si deseas por el que tú y la dueña quieran)
+const PIN_GERENCIAL = "2026";
+
 document.addEventListener("DOMContentLoaded", () => {
-  // Cargar preferencia de tema guardada
+  // Verificar si ya inició sesión previamente en este dispositivo
+  const sesionActiva = sessionStorage.getItem("sicr_autenticado");
+  const modal = document.getElementById("loginModal");
+
+  if (sesionActiva === "true") {
+    if (modal) modal.style.display = "none";
+    iniciarDashboard();
+  } else {
+    if (modal) modal.style.display = "flex";
+    const pinInput = document.getElementById("pinInput");
+    if (pinInput) {
+      pinInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") verificarPIN();
+      });
+    }
+  }
+});
+
+function verificarPIN() {
+  const pinIngresado = document.getElementById("pinInput").value.trim();
+  const errorSpan = document.getElementById("errorPin");
+
+  if (pinIngresado === PIN_GERENCIAL) {
+    sessionStorage.setItem("sicr_autenticado", "true");
+    document.getElementById("loginModal").style.display = "none";
+    iniciarDashboard();
+  } else {
+    errorSpan.textContent = "❌ PIN incorrecto. Intenta de nuevo.";
+    document.getElementById("pinInput").value = "";
+    document.getElementById("pinInput").focus();
+  }
+}
+
+function iniciarDashboard() {
   const temaGuardado = localStorage.getItem("tema_mrparrilla") || "dark";
   if (temaGuardado === "light") {
     document.body.classList.add("light-theme");
@@ -19,9 +55,8 @@ document.addEventListener("DOMContentLoaded", () => {
       btnIcon.classList.add("fa-moon");
     }
   }
-
   cargarDatosDashboard();
-});
+}
 
 // Función para alternar entre Modo Claro y Oscuro
 function toggleTheme() {

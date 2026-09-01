@@ -15,6 +15,24 @@
 </head>
 <body>
 
+  <!-- Modal de Seguridad / PIN de Acceso -->
+  <div id="loginModal" class="login-overlay">
+    <div class="login-card">
+      <div class="login-icon">
+        <i class="fa-solid fa-lock"></i>
+      </div>
+      <h2>Acceso Gerencial</h2>
+      <p>Mr. Parrilla -Xpress-</p>
+      <div class="pin-input-group">
+        <input type="password" id="pinInput" maxlength="8" placeholder="Ingresa tu PIN" autocomplete="off" autofocus>
+        <button id="btnEntrar" onclick="verificarPIN()">
+          <i class="fa-solid fa-arrow-right"></i>
+        </button>
+      </div>
+      <small id="errorPin" class="error-text"></small>
+    </div>
+  </div>
+
   <!-- Background Glows -->
   <div class="glow glow-1"></div>
   <div class="glow glow-2"></div>
