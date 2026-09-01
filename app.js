@@ -224,7 +224,7 @@ function renderizarTablaInsumos(insumos) {
   tbody.innerHTML = "";
 
   if (!insumos || insumos.length === 0) {
-    tbody.innerHTML = "<tr><td colspan='8' class='text-center'>No hay insumos registrados en la hoja.</td></tr>";
+    tbody.innerHTML = "<tr><td colspan='8' class='text-center'>No hay insumos registrados en la hoja aún.</td></tr>";
     return;
   }
 
@@ -252,12 +252,12 @@ function renderizarTablaInsumos(insumos) {
       <td>
         <span class="badge ${esCritico ? 'badge-critico' : 'badge-ok'}">
           <i class="fa-solid ${esCritico ? 'fa-triangle-exclamation' : 'fa-circle-check'}"></i>
-          ${esCritico ? '¡Comprar Urgente!' : 'Stock Óptimo'}
+          ${esCritico ? '¡Comprar Hoy Mismo!' : 'Stock Completo'}
         </span>
       </td>
       <td>${esCritico ? `<strong>+${sugerenciaCompra} ${i.unidad}</strong>` : '-'}</td>
       <td>${esCritico ? '$' + costoTotalSugerido.toLocaleString('es-CO') : '-'}</td>
-      <td><small style="color:var(--text-muted);">${i.proveedor || 'Local'}</small></td>
+      <td><small style="color:var(--text-muted);">${i.proveedor || 'Mercado / Proveedor'}</small></td>
     `;
     tbody.appendChild(tr);
   });
@@ -269,15 +269,23 @@ function renderizarTablaCortes(cortes) {
   tbody.innerHTML = "";
 
   if (!cortes || cortes.length === 0) {
-    tbody.innerHTML = "<tr><td colspan='7' class='text-center'>No hay registros de cierres de caja.</td></tr>";
+    tbody.innerHTML = "<tr><td colspan='7' class='text-center'>No hay registros de cuadres de caja todavía.</td></tr>";
     return;
   }
 
   cortes.slice(-8).reverse().forEach(c => {
     const dif = parseFloat(c.diferencia) || 0;
     let badgeClass = "badge-ok";
-    if (dif < -1000) badgeClass = "badge-critico";
-    else if (dif > 1000) badgeClass = "badge-sobrante";
+    let estadoTexto = c.estado;
+    if (dif < -1000) {
+      badgeClass = "badge-critico";
+      estadoTexto = "⚠️ Faltó Plata";
+    } else if (dif > 1000) {
+      badgeClass = "badge-sobrante";
+      estadoTexto = "ℹ️ Sobró Plata";
+    } else {
+      estadoTexto = "✅ Caja Cuadrada";
+    }
 
     const fechaStr = new Date(c.fecha).toLocaleString([], { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
@@ -289,7 +297,7 @@ function renderizarTablaCortes(cortes) {
       <td>$${(parseFloat(c.totalEfectivo)||0).toLocaleString('es-CO')}</td>
       <td>$${(parseFloat(c.totalDigital)||0).toLocaleString('es-CO')}</td>
       <td><strong style="color:${dif < -1000 ? '#F87171' : '#34D399'};">$${dif.toLocaleString('es-CO')}</strong></td>
-      <td><span class="badge ${badgeClass}">${c.estado}</span></td>
+      <td><span class="badge ${badgeClass}">${estadoTexto}</span></td>
     `;
     tbody.appendChild(tr);
   });
