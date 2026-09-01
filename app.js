@@ -45,6 +45,32 @@ function verificarPIN() {
   }
 }
 
+// Navegación Modular entre Pantallas (SPA)
+function navegarModulo(idModulo) {
+  // 1. Ocultar todas las vistas y mostrar la seleccionada
+  document.querySelectorAll('.modulo-vista').forEach(v => v.classList.remove('active'));
+  const vistaActiva = document.getElementById('modulo-' + idModulo);
+  if (vistaActiva) vistaActiva.classList.add('active');
+
+  // 2. Actualizar botón activo en la barra lateral
+  document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('active'));
+  if (event && event.currentTarget) event.currentTarget.classList.add('active');
+
+  // 3. Cambiar título y descripción superior
+  const titulos = {
+    resumen: { t: "Resumen General del Negocio", d: "Monitoreo en vivo de ventas, qué falta comprar y cómo va la plata en caja" },
+    inventario: { t: "¿Qué hay que comprar para la parrilla?", d: "Semáforo en vivo de insumos y presupuesto estimado para el mandado" },
+    ventas: { t: "Historial Completo de Ventas y Cuentas", d: "Detalle de cada comanda cobrada, mesero y medio de pago" },
+    caja: { t: "Auditoría de Caja Ciega (Cierres de Turno)", d: "Revisión estricta de dinero físico en gaveta vs. ventas del sistema" },
+    mermas: { t: "Auditoría de Comida Dañada (Mermas)", d: "Registro de comida quemada o caída para justificar el inventario" }
+  };
+
+  if (titulos[idModulo]) {
+    document.getElementById("viewTitle").textContent = titulos[idModulo].t;
+    document.getElementById("viewDesc").textContent = titulos[idModulo].d;
+  }
+}
+
 function iniciarDashboard() {
   const temaGuardado = localStorage.getItem("tema_mrparrilla") || "dark";
   if (temaGuardado === "light") {
@@ -92,6 +118,8 @@ async function cargarDatosDashboard() {
       renderizarGraficos(data);
       renderizarTablaInsumos(data.insumos);
       renderizarTablaCortes(data.cortes);
+      renderizarTablaVentasDetalle(data.ventas);
+      renderizarTablaMermas(data.mermas);
 
       const ahora = new Date();
       lastUpdateSpan.textContent = "Última sincronización: " + ahora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -303,7 +331,60 @@ function renderizarTablaCortes(cortes) {
   });
 }
 
-// 5. Imprimir Lista de Compras
+// 5. Renderizado de Tabla de Ventas y Comandas en Detalle
+function renderizarTablaVentasDetalle(ventas) {
+  const tbody = document.getElementById("tablaVentasDetalleBody");
+  if (!tbody) return;
+  tbody.innerHTML = "";
+
+  if (!ventas || ventas.length === 0) {
+    tbody.innerHTML = "<tr><td colspan='8' class='text-center'>No hay ventas registradas aún.</td></tr>";
+    return;
+  }
+
+  ventas.slice().reverse().forEach(v => {
+    const fStr = v.fecha ? new Date(v.fecha).toLocaleString([], { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-';
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><code>${v.id}</code></td>
+      <td>${fStr}</td>
+      <td><strong>${v.mesa}</strong></td>
+      <td>${v.mesero || 'Mesero'}</td>
+      <td>${v.detalle}</td>
+      <td><strong>$${(parseFloat(v.total)||0).toLocaleString('es-CO')}</strong></td>
+      <td>${v.metodoPago || '-'}</td>
+      <td><span class="badge ${v.estado === 'Cobrado' ? 'badge-ok' : 'badge-critico'}">${v.estado}</span></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// 6. Renderizado de Tabla de Mermas
+function renderizarTablaMermas(mermas) {
+  const tbody = document.getElementById("tablaMermasBody");
+  if (!tbody) return;
+  tbody.innerHTML = "";
+
+  if (!mermas || mermas.length === 0) {
+    tbody.innerHTML = "<tr><td colspan='5' class='text-center'>No hay comida dañada ni mermas reportadas. ¡Excelente trabajo en cocina!</td></tr>";
+    return;
+  }
+
+  mermas.slice().reverse().forEach(m => {
+    const fStr = m.fecha ? new Date(m.fecha).toLocaleString([], { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-';
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><code>${m.id}</code></td>
+      <td>${fStr}</td>
+      <td><strong>${m.plato}</strong></td>
+      <td><span class="badge badge-critico">${m.motivo}</span></td>
+      <td>${m.auditor || 'Personal'}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// 7. Imprimir Lista de Compras
 function imprimirListaCompras() {
   window.print();
 }
